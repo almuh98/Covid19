@@ -28,12 +28,14 @@ order by date, location
 Select SUM(new_cases) as total_cases, SUM(cast(new_deaths as int)) as total_deaths, SUM(cast(new_deaths as int))/SUM(New_Cases)*100 as PercentageOfDeath
 From portfolio..deaths
 where continent is not null 
-order by iso_code, continent
+group by continent
+order by continent
 
 -- Countries with the highest infection rate relative to the population
 
 Select location, population, MAX(total_cases),  Max((total_cases/population))*100 as percentage_infected
 From portfolio..deaths
+where population <> 0
 Group by location, population
 order by percentage_infected desc
 
@@ -60,14 +62,14 @@ order by total desc
 
 Select Location, date, total_cases, total_deaths, total_deaths/total_cases*100 as percantage
 From portfolio..deaths
-Where continent is not null and total_deaths is not null
+Where total_cases <> 0
 order by date, location
 
 
 -- The percentage of the population that has received at least one Covid vaccine
 
 Select d.continent, d.location, d.date, d.population, v.new_vaccinations
-, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vac
+, SUM(v.new_vaccinations) OVER (Partition by d.Location Order by d.location, d.Date) as Vac
 From portfolio..deaths d
 Join portfolio..vaccine v on d.location = v.location and d.date = v.date
 where d.continent is not null 
@@ -83,25 +85,27 @@ order by iso_code, continent
 
 -- CTE 
 
-With PopulationVsVaccination (Continent, Location, Date, Population, New_Vaccinations, Vac)
+With PopulationVsVaccination (Continent, Location, Date, Population, New_Vaccinations, Vaccinated)
 as
 (
 Select d.continent, d.location, d.date, d.population, v.new_vaccinations
-, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
+, SUM(v.new_vaccinations) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
 From portfolio..deaths d Join portfolio..vaccine v On d.location = v.location and d.date = v.date
 where d.continent is not null 
 )
 Select *, (Vaccinated/Population)*100
 From PopulationVsVaccination
+where population <> 0
 
 
--- Create View 
+---- Create View 
+----Create View PercentageOfPopulationVaccinated as
+----DROP Table if exists #PercentageOfPopulationVaccinated
 
-Create View PercentageOfPopulationVaccinated as
-Select d.continent, d.location, d.date, d.population, v.new_vaccinations
-, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
-From portfolio..deaths d Join portfolio..vaccine v On d.location = v.location and d.date = v.date
-where d.continent is not null 
+--Select d.continent, d.location, d.date, d.population, v.new_vaccinations
+--, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
+--From portfolio..deaths d Join portfolio..vaccine v On d.location = v.location and d.date = v.date
+--where d.continent is not null 
 
 
 -- Temp table 
@@ -112,14 +116,14 @@ Create Table #PercentageOfPopulationVaccinated
 Continent nvarchar(255),
 Location nvarchar(255),
 Date datetime,
-Population numeric,
-New_vaccinations numeric,
-Vaccinated numeric
+Population float,
+New_vaccinations float,
+Vaccinated float
 )
 
 Insert into #PercentageOfPopulationVaccinated
 Select d.continent, d.location, d.date, d.population, v.new_vaccinations
-, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
+, SUM(v.new_vaccinations) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
 
 From portfolio..deaths d
 Join portfolio..vaccine v
@@ -128,5 +132,6 @@ Join portfolio..vaccine v
 
 Select *, (Vaccinated/Population)*100
 From #PercentageOfPopulationVaccinated
+where Population <> 0
 
 
