@@ -99,13 +99,13 @@ where population <> 0
 
 
 ---- Create View 
-----Create View PercentageOfPopulationVaccinated as
-----DROP Table if exists #PercentageOfPopulationVaccinated
+Create View PercentageOfPopulationVaccinated as
+DROP Table if exists #PercentageOfPopulationVaccinated
 
---Select d.continent, d.location, d.date, d.population, v.new_vaccinations
---, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
---From portfolio..deaths d Join portfolio..vaccine v On d.location = v.location and d.date = v.date
---where d.continent is not null 
+Select d.continent, d.location, d.date, d.population, v.new_vaccinations
+, SUM(CONVERT(int,v.new_vaccinations)) OVER (Partition by d.Location Order by d.location, d.Date) as Vaccinated
+From portfolio..deaths d Join portfolio..vaccine v On d.location = v.location and d.date = v.date
+where d.continent is not null 
 
 
 -- Temp table 
